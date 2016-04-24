@@ -92,7 +92,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
         classifier.W.set_value(W, borrow=True)
         classifier.b.set_value(b, borrow=True)
 
-        return cost({x: inpt, y: targets})
+        return cost.eval({x: inpt, y: targets})
 
     def d_loss_wrt_pars(parameters, inpt, targets):
         W, b = climin.util.shaped_from_flat(parameters, tmpl)
@@ -122,7 +122,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
         opt = climin.GradientDescent(wrt, d_loss_wrt_pars, step_rate=0.1, momentum=0.0, momentum_type='nesterov',
                                      args=args)
     elif optimizer == 'rmsprop':
-        print("[*] Using gradient descent ...")
+        print("[*] Using rmsprop ...")
         opt = climin.RmsProp(wrt, d_loss_wrt_pars, step_rate=0.01, decay=0.9, momentum=0, step_adapt=False,
                              step_rate_min=0, step_rate_max=numpy.inf, args=args)
     elif optimizer == 'adadelta':
@@ -237,4 +237,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
 if __name__ == '__main__':
     optimizers = ['gradient_descent', 'rmsprop', 'adadelta', 'adam', 'resilient_propagation',
                   'nonlinear_conjugate_gradients', 'quasi_newton_bfgs', 'quasi_newton_lbfgs']
-    opt(optimizer='gradient_descent')
+    scores = []
+    for o in optimizers:
+        scores.append(opt(optimizer=o))
+    print(scores)
