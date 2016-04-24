@@ -140,10 +140,11 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
         print("[*] Using nonlinear conjugate gradient ...")
         opt = climin.NonlinearConjugateGradient(wrt, loss, d_loss_wrt_pars, min_grad=1e-06, args=args)
     elif optimizer == 'quasi_newton_bfgs':
-        print("[*] Using quasi newton bfgs...")
+        print("[*] Using quasi newton bfgs ... not working right now")
         opt = climin.Bfgs(wrt, loss, d_loss_wrt_pars, initial_inv_hessian=None, line_search=None, args=args)
+        return 1
     elif optimizer == 'quasi_newton_lbfgs':
-        print("[*] Using quasi newton l-bfgs...")
+        print("[*] Using quasi newton l-bfgs ...")
         opt = climin.Lbfgs(wrt, loss, d_loss_wrt_pars, initial_hessian_diag=1, n_factors=10, line_search=None, args=args)
     else:
         print("[*] No valid optimizer selected!")
@@ -236,7 +237,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
 
 if __name__ == '__main__':
     optimizers = ['gradient_descent', 'rmsprop', 'adadelta', 'adam', 'resilient_propagation',
-                  'nonlinear_conjugate_gradients', 'quasi_newton_bfgs', 'quasi_newton_lbfgs']
+                  'nonlinear_conjugate_gradients', 'quasi_newton_lbfgs']
     scores = []
     for o in optimizers:
         scores.append(opt(optimizer=o))
