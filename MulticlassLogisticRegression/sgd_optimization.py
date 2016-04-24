@@ -9,9 +9,7 @@ import os
 import sys
 
 from LogReg import LogReg
-from LogReg import load_data
-
-
+from data import load_data
 
 
 def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000, dataset='mnist.pkl.gz', batch_size=600):
@@ -42,7 +40,6 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000, dataset='mnist.pkl
     n_valid_batches = valid_set_x.get_value(borrow=True).shape[0] // batch_size
     n_test_batches = test_set_x.get_value(borrow=True).shape[0] // batch_size
 
-
     ######################
     # BUILD ACTUAL MODEL #
     ######################
@@ -58,12 +55,12 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000, dataset='mnist.pkl
     classifier = LogReg(input=x, n_in=28*28, n_out=10)
 
     # cost to minimize is negative log-likelihood
-    cost = classifier.negativ_llh(y)
+    cost = classifier.negative_llh(y)
 
-    # compile functions that messure the mistakes made by the model on each minibatch
+    # compile functions that measure the mistakes made by the model on each minibatch
     test_model = theano.function(
         inputs=[index],
-        outputs=cost,
+        outputs=classifier.errors(y),
         givens={
             x: test_set_x[index * batch_size: (index + 1) * batch_size],
             y: test_set_y[index * batch_size: (index + 1) * batch_size],
@@ -85,7 +82,7 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000, dataset='mnist.pkl
 
     # define how to update the parameters of the model
     updates = [(classifier.W, classifier.W - learning_rate * g_W),
-           (classifier.b, classifier.b - learning_rate * g_b)]
+               (classifier.b, classifier.b - learning_rate * g_b)]
 
     # compile a function to train the model with rules in 'updates,
     # which also returns the cost
@@ -132,12 +129,12 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000, dataset='mnist.pkl
 
                 print(
                     "epoch %i, minibatch %i/%i, validation error %f %%" %
-                      (
-                          epoch,
-                          minibatch_index + 1,
-                          n_train_batches,
-                          this_validation_loss * 100.
-                      )
+                    (
+                        epoch,
+                        minibatch_index + 1,
+                        n_train_batches,
+                        this_validation_loss * 100.
+                    )
                 )
 
                 # if we got the best validation score until now
