@@ -103,7 +103,7 @@ def sgd_optimization_mnist(learning_rate=0.13, n_epochs=1000, dataset='mnist.pkl
     # early stopping parameters
     patience = 5000  # look at minimum this number of examples
     patience_increase = 2  # wait this much longer when a new bet is founc
-    improvement_threshold = 0.995  # relative imporvement that is considered significant
+    improvement_threshold = 0.995  # relative improvement that is considered significant
     validation_frequency = min(n_train_batches, patience // 2)  # check performance on validation set
                                                                 # after this many minibatches
                                                                 # here after 1 epoch

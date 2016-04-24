@@ -84,10 +84,5 @@ def load_data(dataset, shared=True):
         valid_set_x, valid_set_y = not_shared_dataset(valid_set)
         train_set_x, train_set_y = not_shared_dataset(train_set)
 
-        print test_set_x.dtype
-        print valid_set_x.dtype
-        print test_set_y.dtype
-        print valid_set_y.dtype
-
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y), (test_set_x, test_set_y)]
     return rval
