@@ -14,7 +14,9 @@ The 'optimizer' argument specifies the optimizer to use. Best results were achie
 For use just run the script.
 
 Problem 11:
-
+receptive_fields.py
+Run to generate the 'repflds.png' image (already done, 'adam'). This implementation shows the receptive fields for 'rmsprop'
+and 'adam' and saves the images to 'repflds.png' (overrides previus ones).
 
 Problem 12:
 Run plot_losses.py - Warning overrides original error.png!

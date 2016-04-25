@@ -5,3 +5,4 @@
 test.py
 
 !MulticlassLogisticRegression/adam.pkl
+!MulticlassLogisticRegression/rmsprop.pkl
