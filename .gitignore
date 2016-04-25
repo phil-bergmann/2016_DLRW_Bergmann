@@ -1,3 +1,7 @@
 .DS_Store
 .idea/
-.pyc
+*.pyc
+*.pkl
+test.py
+
+!MulticlassLogisticRegression/adam.pkl

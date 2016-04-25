@@ -16,7 +16,7 @@ from LogReg import LogReg
 
 
 def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd', patience=5000,
-        patience_increase=2, improvement_threshold=0.995, verbose=False, save=False):
+        patience_increase=2, improvement_threshold=0.995, verbose=False, save=False, filename='best_model.pkl'):
     """ Further optimized training function for the Logistic Regression
 
     Demonstration on MNIST dataset.
@@ -85,7 +85,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd', p
         outputs=classifier.errors(y),
         givens={
             x: test_set_x,
-            y: test_set_y,
+            y: test_set_y
         }
     )
 
@@ -94,7 +94,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd', p
         outputs=classifier.errors(y),
         givens={
             x: valid_set_x,
-            y: valid_set_y,
+            y: valid_set_y
         }
     )
 
@@ -103,7 +103,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd', p
         outputs=classifier.errors(y),
         givens={
             x: train_set_x,
-            y: train_set_y,
+            y: train_set_y
         }
     )
 
@@ -248,7 +248,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd', p
                 )
 
                 # save the best model
-                with open('best_model.pkl', 'wb') as f:
+                with open(filename, 'wb') as f:
                     pickle.dump(classifier, f)
 
         if patience <= iteration or epoch >= n_epochs:
