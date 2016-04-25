@@ -15,7 +15,8 @@ from data import load_data
 from LogReg import LogReg
 
 
-def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
+def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd', patience=5000,
+        patience_increase=2, improvement_threshold=0.995, verbose=False, save=False):
     """ Further optimized training function for the Logistic Regression
 
     Demonstration on MNIST dataset.
@@ -31,6 +32,22 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
 
     :type optimizer: str
     :param optimizer: Selects the optimizer to use
+
+    early stopping parameters
+    :type patience: int
+    :param patience: minimum minibatches to look at
+
+    :type patience_increase: float
+    :param patience_increase: wait this much longer when new best is found
+
+    :type improvement_threshold: float
+    :param improvement_threshold: relative improvement that is considered big
+
+    :type verbose: bool
+    :param verbose: return losses for plotting
+
+    :type save: bool
+    :param save: save the best model to best_model.pkl
     """
 
     # load the data, use numpy arrays not shared theano vars
@@ -81,6 +98,15 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
         }
     )
 
+    train_model = theano.function(
+        inputs=[],
+        outputs=classifier.errors(y),
+        givens={
+            x: train_set_x,
+            y: train_set_y,
+        }
+    )
+
     def set_pars(parameters):
         W, b = climin.util.shaped_from_flat(parameters, tmpl)
         classifier.W.set_value(W, borrow=True)
@@ -123,7 +149,7 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
                                      args=args)
     elif optimizer == 'rmsprop':
         print("[*] Using rmsprop ...")
-        opt = climin.RmsProp(wrt, d_loss_wrt_pars, step_rate=0.01, decay=0.9, momentum=0, step_adapt=False,
+        opt = climin.RmsProp(wrt, d_loss_wrt_pars, step_rate=0.001, decay=0.9, momentum=0, step_adapt=False,
                              step_rate_min=0, step_rate_max=numpy.inf, args=args)
     elif optimizer == 'adadelta':
         print("[*] Using adadelte ...")
@@ -157,9 +183,9 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
     print("[*] Training the model ...")
 
     # early stopping parameters
-    patience = 5000  # look at minimum this number of examples
-    patience_increase = 2  # wait this much longer when a new bet is founc
-    improvement_threshold = 0.995  # relative improvement that is considered significant
+    # patience = 5000  # look at minimum this number of examples
+    # patience_increase = 2  # wait this much longer when a new best is found
+    # improvement_threshold = 0.995  # relative improvement that is considered significant
     validation_frequency = int(min(n_train_batches, patience // 2))  # check performance on validation set
                                                                      # after this many minibatches
                                                                      # here after 1 epoch
@@ -167,6 +193,12 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
     best_validation_loss = numpy.inf
     test_loss = numpy.inf
     start_time = timeit.default_timer()
+    epoch = 0
+
+    va_losses = []
+    tr_losses = []
+    te_losses = []
+    x_axis = []
 
     for info in opt:
 
@@ -177,6 +209,12 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
         if iteration % validation_frequency == 0:
             # compute zero-one loss on validation set
             validation_loss = validate_model()
+
+            if verbose:
+                va_losses.append(validation_loss)
+                te_losses.append(test_model())
+                tr_losses.append(train_model())
+                x_axis.append(iteration / n_train_batches)
 
             print(
                 "epoch %i, minibatch %i/%i, validation error %f %%" %
@@ -228,17 +266,18 @@ def opt(n_epochs=1000, batch_size=600, dataset='mnist.pkl.gz', optimizer='gd'):
     )
     print("The code run for %d epochs, with %f epochs/sec" % (epoch, 1. * epoch / (end_time - start_time)))
     print(
-    ("The code for file " + os.path.split(__file__)[1] + " ran for %.1fs" % ((end_time - start_time))), file=sys.stderr)
+    ("The code for file " + os.path.split(__file__)[1] + " ran for %.1fs" % (end_time - start_time)), file=sys.stderr)
 
-    with open('best_model.pkl', 'wb') as f:
-        pickle.dump(classifier, f)
+    if save:
+        with open('best_model.pkl', 'wb') as f:
+            pickle.dump(classifier, f)
 
-    return test_loss
+    if verbose:
+        return tr_losses, va_losses, te_losses, x_axis
 
 if __name__ == '__main__':
     optimizers = ['gradient_descent', 'rmsprop', 'adadelta', 'adam', 'resilient_propagation',
                   'nonlinear_conjugate_gradients', 'quasi_newton_lbfgs']
-    scores = []
-    for o in optimizers:
-        scores.append(opt(optimizer=o))
-    print(scores)
+
+    opt(optimizer='adam')
+    opt(optimizer='rmsprop')
