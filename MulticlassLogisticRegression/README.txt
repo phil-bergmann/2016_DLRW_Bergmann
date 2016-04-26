@@ -31,3 +31,9 @@ generate() - Tries to generate a good model, with a promising optimizer and earl
 stop too soon. Uses the 'adam' optimizer and saves model to 'adam.pkl'. Results were 6.69% error on the validation set
 and 7.22% on the test set. Just run the script, it will execute validate() and test the model on the validation and test
 set and output the results.
+
+Bonus question: By enhancing the data set we create more data for out algorithm to perform better. While this would be
+completely legal in a commercial product where only results count, it is bad in science. The MNIST data set was created
+to be able to compare the performance of different classification algorithms and by enhancing the data our 'bad' algorithm
+gains an unfair advantage. If now our algorithm performs better it's not because it is such a capable and good algorithm,
+but simply because it has more data and now the sense of MNIST data set (a common set for comparing algorithms) is lost.
