@@ -15,9 +15,9 @@ from data import load_data
 from MLP import MLP
 
 
-def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
-             dataset='mnist.pkl.gz', batch_size=20, n_hidden=300, optimizer='rmsprop', verbose=False,
-             filename='best_model.pkl'):
+def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
+             dataset='mnist.pkl.gz', batch_size=20, n_hidden=300, optimizer='gradient_descent', verbose=False,
+             initialize=None, move_mean=None):
     """
     Demonstrate stochastic gradient descent optimization for a multilayer
     perceptron
@@ -41,8 +41,20 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     :type n_epochs: int
     :param n_epochs: maximal number of epochs to run the optimizer
 
-    :type dataset: string
+    :type dataset: str
     :param dataset: the path of the MNIST dataset
+
+    :type optimizer: str
+    :param optimizer: Optimizer to use (currently: gradient_descent / rmsprop)
+
+    :type verbose: bool
+    :param verbose: return train, validate, test errors as array
+
+    :type initialize: str
+    :param initialize: choose initialization method
+
+    :type move_mean: float
+    :param move_mean: move the mean of the input data
     """
     # theano.config.optimizer='None'
     # theano.config.exception_verbosity='high'
@@ -52,6 +64,14 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     train_set_x, train_set_y = datasets[0]
     valid_set_x, valid_set_y = datasets[1]
     test_set_x, test_set_y = datasets[2]
+
+    if move_mean != None:
+        for i in train_set_x.get_value(borrow=True):
+            i[...] = i + move_mean
+        for i in valid_set_x.get_value(borrow=True):
+            i[...] = i + move_mean
+        for i in test_set_x.get_value(borrow=True):
+            i[...] = i + move_mean
 
     # compute number of minibatches for training, validation and testing
     n_train_batches = train_set_x.get_value(borrow=True).shape[0] // batch_size
@@ -165,12 +185,19 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     # build optimizer
     if optimizer == 'gradient_descent':
         print("[*] using GRADIENT DESCENT ...")
-        opt = climin.GradientDescent(wrt, d_loss_wrt_pars, step_rate=0.1, momentum=0.0, momentum_type='nesterov',
+        opt = climin.GradientDescent(wrt, d_loss_wrt_pars, step_rate=0.01, momentum=0.0, momentum_type='nesterov',
                                      args=args)
     elif optimizer == 'rmsprop':
         print("[*] using RMSPROP ...")
-        opt = climin.RmsProp(wrt, d_loss_wrt_pars, step_rate=0.001, decay=0.9, momentum=0, step_adapt=False,
+        opt = climin.RmsProp(wrt, d_loss_wrt_pars, step_rate=0.0001, decay=0.9, momentum=0.0, step_adapt=False,
                              step_rate_min=0, step_rate_max=numpy.inf, args=args)
+    elif optimizer == 'rprop':
+        print("[*] using RPROP ...")
+        opt = climin.Rprop(wrt, d_loss_wrt_pars, args=args)
+    else:
+        print("[*] no valid optimizer selected!")
+        print("[*] shutting down ...")
+        return 1
 
     ###############
     # TRAIN MODEL #
@@ -191,7 +218,7 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     # check every epoch
 
     best_validation_loss = numpy.inf
-    best_iter = 0
+    best_epoch = 0
     test_loss = 0.
     start_time = timeit.default_timer()
 
@@ -257,7 +284,7 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
 
     end_time = timeit.default_timer()
     print(('Optimization complete. Best validation score of %f %% '
-           'obtained at iteration %i, with test performance %f %%') %
+           'obtained at epoch %i, with test performance %f %%') %
           (best_validation_loss * 100., best_epoch, test_loss * 100.))
     print(('The code for file ' +
             os.path.split(__file__)[1] +
