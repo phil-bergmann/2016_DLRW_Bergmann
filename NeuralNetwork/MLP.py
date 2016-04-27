@@ -44,11 +44,11 @@ class MLP(object):
         b_logReg = None
 
         if W != None:
-            W_hidden = W[0].reshape(n_in, n_hidden)
-            W_logReg = W[1].reshape(n_hidden, n_out)
+            W_hidden = W[0]
+            W_logReg = W[1]
         if b != None:
-            b_hidden = b[0].reshape(n_hidden)
-            b_logReg = b[0].reshape(n_out)
+            b_hidden = b[0]
+            b_logReg = b[1]
         # Since we are dealing with a one hidden layer MLP, this will translate
         # into a HiddenLayer with a tanh activation function connected to the
         # LogisticRegression layer; the activation function can be replaced by
@@ -72,7 +72,7 @@ class MLP(object):
             W=W_logReg,
             b=b_logReg
         )
-        # end-snippet-2 start-snippet-3
+
         # L1 norm ; one regularization option is to enforce L1 norm to
         # be small
         self.L1 = (
@@ -99,7 +99,6 @@ class MLP(object):
         # the parameters of the model are the parameters of the two layer it is
         # made out of
         self.params = self.hiddenLayer.params + self.logRegressionLayer.params
-        # end-snippet-3
 
         # keep track of model input
         self.input = input

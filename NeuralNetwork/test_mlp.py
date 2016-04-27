@@ -16,7 +16,8 @@ from MLP import MLP
 
 
 def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
-             dataset='mnist.pkl.gz', batch_size=20, n_hidden=300):
+             dataset='mnist.pkl.gz', batch_size=20, n_hidden=300, optimizer='rmsprop', verbose=False,
+             filename='best_model.pkl'):
     """
     Demonstrate stochastic gradient descent optimization for a multilayer
     perceptron
@@ -43,6 +44,9 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     :type dataset: string
     :param dataset: the path of the MNIST dataset
     """
+    # theano.config.optimizer='None'
+    # theano.config.exception_verbosity='high'
+
     datasets = load_data(dataset)
 
     train_set_x, train_set_y = datasets[0]
@@ -59,21 +63,47 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     ######################
     print('[*] building the model ...')
 
+    # define a unpack function for the flat parameters
+    def unpack(parameters, templates):
+        pars = []
+        pos = 0
+        for t in templates:
+            size = [numpy.prod(i) for i in t]
+            size = sum(size)
+            pars.append(climin.util.shaped_from_flat(parameters[pos:pos+size], t))
+            pos += size
+        return pars
+
+    # CLIMIN
+    wrt = numpy.zeros(28*28*n_hidden + n_hidden + n_hidden * 10 + 10, dtype=theano.config.floatX)
+    templates = [[(28*28, n_hidden), n_hidden], [(n_hidden, 10), 10]]
+
+    # initialize weights, not biases
+    for p in unpack(wrt, templates):
+        climin.initialize.randomize_normal(p[0], 0, 0.01)
+
+    # datastream
+    args = ((i, {}) for i in climin.util.iter_minibatches(
+        [train_set_x.eval(), train_set_y.eval()], batch_size, [0, 0]))
+
+    # THEANO
     # allocate symbolic variables for the data
-    index = T.lscalar()  # index to a [mini]batch
     x = T.matrix('x')  # the data is presented as rasterized images
     y = T.ivector('y')  # the labels are presented as 1D vector of
-    # [int] labels
+                        # [int] labels
 
-    tmpl = [((28*28*300), (300*10)), (300, 10)]
-    parsFlat, (Weights, bias) = climin.util.empty_with_views(tmpl)
+    pars = []
+    for p in unpack(wrt, templates):
+        pars.append((theano.shared(value=p[0], borrow=True), theano.shared(value=p[1], borrow=True)))
 
     # construct the MLP class
     classifier = MLP(
         input=x,
         n_in=28 * 28,
         n_hidden=n_hidden,
-        n_out=10
+        n_out=10,
+        W=[pars[0][0], pars[1][0]],
+        b=[pars[0][1], pars[1][1]]
     )
 
     # the cost we minimize during training is the negative log likelihood of
@@ -87,21 +117,30 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
 
     # compiling a Theano function that computes the mistakes that are made
     # by the model on a minibatch
-    test_model = theano.function(
-        inputs=[index],
+    test_error = theano.function(
+        inputs=[],
         outputs=classifier.errors(y),
         givens={
-            x: test_set_x[index * batch_size:(index + 1) * batch_size],
-            y: test_set_y[index * batch_size:(index + 1) * batch_size]
+            x: test_set_x,
+            y: test_set_y
         }
     )
 
-    validate_model = theano.function(
-        inputs=[index],
+    val_error = theano.function(
+        inputs=[],
         outputs=classifier.errors(y),
         givens={
-            x: valid_set_x[index * batch_size:(index + 1) * batch_size],
-            y: valid_set_y[index * batch_size:(index + 1) * batch_size]
+            x: valid_set_x,
+            y: valid_set_y
+        }
+    )
+
+    train_error = theano.function(
+        inputs=[],
+        outputs=classifier.errors(y),
+        givens={
+            x: valid_set_x,
+            y: valid_set_y
         }
     )
 
@@ -109,36 +148,35 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
     # the resulting gradients will be stored in a list gparams
     gparams = [T.grad(cost, param) for param in classifier.params]
 
-    # specify how to update the parameters of the model as a list of
-    # (variable, update expression) pairs
-
-    # given two lists of the same length, A = [a1, a2, a3, a4] and
-    # B = [b1, b2, b3, b4], zip generates a list C of same size, where each
-    # element is a pair formed from the two lists :
-    #    C = [(a1, b1), (a2, b2), (a3, b3), (a4, b4)]
-    updates = [
-        (param, param - learning_rate * gparam)
-        for param, gparam in zip(classifier.params, gparams)
-        ]
-
-    # compiling a Theano function `train_model` that returns the cost, but
-    # in the same time updates the parameter of the model based on the rules
-    # defined in `updates`
-    train_model = theano.function(
-        inputs=[index],
-        outputs=cost,
-        updates=updates,
-        givens={
-            x: train_set_x[index * batch_size: (index + 1) * batch_size],
-            y: train_set_y[index * batch_size: (index + 1) * batch_size]
-        }
+    grad = theano.function(
+        inputs=[x, y],
+        outputs=gparams
     )
-    # end-snippet-5
+
+    def d_loss_wrt_pars(parameters, inpt, targets):
+        set_pars(parameters)
+        n = numpy.array([g for g in grad(inpt, targets)])
+        return numpy.concatenate((n[0].flatten(), n[1], n[2].flatten(), n[3]))
+
+    def set_pars(parameters):
+        for tp, cp in zip(classifier.params, [i for sub in unpack(parameters, templates) for i in sub]):
+            tp.set_value(cp, borrow=True)
+
+    # build optimizer
+    if optimizer == 'gradient_descent':
+        print("[*] using GRADIENT DESCENT ...")
+        opt = climin.GradientDescent(wrt, d_loss_wrt_pars, step_rate=0.1, momentum=0.0, momentum_type='nesterov',
+                                     args=args)
+    elif optimizer == 'rmsprop':
+        print("[*] using RMSPROP ...")
+        opt = climin.RmsProp(wrt, d_loss_wrt_pars, step_rate=0.001, decay=0.9, momentum=0, step_adapt=False,
+                             step_rate_min=0, step_rate_max=numpy.inf, args=args)
 
     ###############
     # TRAIN MODEL #
     ###############
-    print('... training')
+    print('[*] training ...')
+
 
     # early-stopping parameters
     patience = 10000  # look as this many examples regardless
@@ -154,69 +192,77 @@ def test_mlp(learning_rate=0.01, L1_reg=0.00, L2_reg=0.0001, n_epochs=1000,
 
     best_validation_loss = numpy.inf
     best_iter = 0
-    test_score = 0.
+    test_loss = 0.
     start_time = timeit.default_timer()
 
-    epoch = 0
-    done_looping = False
+    va_losses = []
+    tr_losses = []
+    te_losses = []
+    x_axis = []
 
-    while (epoch < n_epochs) and (not done_looping):
-        epoch = epoch + 1
-        for minibatch_index in range(n_train_batches):
+    best_params = numpy.empty_like(wrt)
+    best_test = numpy.inf
 
-            minibatch_avg_cost = train_model(minibatch_index)
-            # iteration number
-            iter = (epoch - 1) * n_train_batches + minibatch_index
+    for info in opt:
+        iteration = info['n_iter']
+        epoch = iteration // n_train_batches
+        minibatch_index = iteration % n_train_batches
 
-            if (iter + 1) % validation_frequency == 0:
-                # compute zero-one loss on validation set
-                validation_losses = [validate_model(i) for i
-                                    in range(n_valid_batches)]
-                this_validation_loss = numpy.mean(validation_losses)
+        if iteration % validation_frequency == 0:
+            # compute zero-one loss on validation set
+            validation_loss = val_error()
+
+            if verbose:
+                va_losses.append(validation_loss)
+                te_losses.append(test_error())
+                tr_losses.append(train_error())
+                x_axis.append(iteration / n_train_batches)
+
+            print(
+                "epoch %i, minibatch %i/%i, validation error %f %%" %
+                (
+                    epoch,
+                    minibatch_index + 1,
+                    n_train_batches,
+                    validation_loss * 100.
+                )
+            )
+
+            # if we got the best validation score until now
+            if validation_loss < best_validation_loss:
+                # improve patience if loss improvement is good enough
+                if validation_loss < best_validation_loss * improvement_threshold:
+                    patience = max(patience, iteration * patience_increase)
+
+                best_validation_loss = validation_loss
+
+                best_params[...] = wrt
+                test_loss = test_error()
+                best_epoch = epoch
 
                 print(
-                    'epoch %i, minibatch %i/%i, validation error %f %%' %
+                    "epoch %i, minibatch %i/%i, test error of best model %f %%" %
                     (
                         epoch,
                         minibatch_index + 1,
                         n_train_batches,
-                        this_validation_loss * 100.
+                        test_loss * 100.
                     )
                 )
 
-                # if we got the best validation score until now
-                if this_validation_loss < best_validation_loss:
-                    # improve patience if loss improvement is good enough
-                    if (
-                                this_validation_loss < best_validation_loss *
-                                improvement_threshold
-                    ):
-                        patience = max(patience, iter * patience_increase)
-
-                    best_validation_loss = this_validation_loss
-                    best_iter = iter
-
-                    # test it on the test set
-                    test_losses = [test_model(i) for i
-                                    in range(n_test_batches)]
-                    test_score = numpy.mean(test_losses)
-
-                    print(('     epoch %i, minibatch %i/%i, test error of '
-                            'best model %f %%') %
-                        (epoch, minibatch_index + 1, n_train_batches,
-                        test_score * 100.))
-
-            if patience <= iter:
-                done_looping = True
-                break
+        if patience <= iteration or epoch >= n_epochs:
+            # set parameters in the LogReg class to make sure they are up to date
+            set_pars(wrt)
+            break
 
     end_time = timeit.default_timer()
     print(('Optimization complete. Best validation score of %f %% '
            'obtained at iteration %i, with test performance %f %%') %
-          (best_validation_loss * 100., best_iter + 1, test_score * 100.))
+          (best_validation_loss * 100., best_epoch, test_loss * 100.))
     print(('The code for file ' +
             os.path.split(__file__)[1] +
-           ' ran for %.2fm' % ((end_time - start_time) / 60.)), file=sys.stderr)
+           ' ran for %.2fm, with %f epochs/min' % ((end_time - start_time) / 60., epoch/(end_time - start_time) * 60.)),
+          file=sys.stderr)
 
 
 if __name__ == '__main__':

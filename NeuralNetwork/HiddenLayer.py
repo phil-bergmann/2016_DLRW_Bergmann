@@ -72,5 +72,6 @@ class HiddenLayer(object):
             lin_output if activation is None
             else activation(lin_output)
         )
+
         # parameters of the model
         self.params = [self.W, self.b]
