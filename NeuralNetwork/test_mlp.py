@@ -17,7 +17,7 @@ from MLP import MLP
 
 def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
              dataset='mnist.pkl.gz', batch_size=20, n_hidden=300, optimizer='gradient_descent', verbose=False,
-             initialize=None, move_mean=None):
+             initialize='relu2', move_mean=None, activation=T.tanh):
     """
     Demonstrate stochastic gradient descent optimization for a multilayer
     perceptron
@@ -99,8 +99,26 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
     templates = [[(28*28, n_hidden), n_hidden], [(n_hidden, 10), 10]]
 
     # initialize weights, not biases
-    for p in unpack(wrt, templates):
-        climin.initialize.randomize_normal(p[0], 0, 0.01)
+    if initialize == 'tanh':
+        p = unpack(wrt, templates)
+        climin.initialize.randomize_normal(p[0][0], 0, 0.14)
+        climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+    elif initialize == 'sig':
+        p = unpack(wrt, templates)
+        climin.initialize.randomize_normal(p[0][0], 0, 0.56)
+        climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+    elif initialize == 'relu1':
+        p = unpack(wrt, templates)
+        climin.initialize.randomize_normal(p[0][0], 0, 0.14)
+        climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+    elif initialize == 'relu2':
+        p = unpack(wrt, templates)
+        climin.initialize.randomize_normal(p[0][0], 0, 0.01)
+        climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+        p[0][1][...] = 1
+    else:
+        for p in unpack(wrt, templates):
+            climin.initialize.randomize_normal(p[0], 0, 0.01)
 
     # datastream
     args = ((i, {}) for i in climin.util.iter_minibatches(
@@ -123,7 +141,8 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
         n_hidden=n_hidden,
         n_out=10,
         W=[pars[0][0], pars[1][0]],
-        b=[pars[0][1], pars[1][1]]
+        b=[pars[0][1], pars[1][1]],
+        activation=activation
     )
 
     # the cost we minimize during training is the negative log likelihood of

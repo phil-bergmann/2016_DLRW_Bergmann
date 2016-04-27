@@ -45,3 +45,10 @@ Without moving:     1.71                1.70        1090
 With moving:        1.63                1.78        1023
 It seems that moving the mean did only decrease the validation error, but increased the test error. So overall I see no
 big positive effect and will just leave the data as it is.
+
+Now let's look at the different activation functions and test if we can increase the learning speed with good weight
+initialization. To limit the time needed for training I will only train until epoch 300, as we should already see there
+if there has been a positive effect. The standard initialization method for all above examples were random samples drawn
+from a gaussian distribution with zero mean and 0.01 standard deviation. First let's look at tanh hidden layer. The tutorial
+cites that a good interval would be between +-sqrt(6/(fan_in+fan_out) drawn from an uniform distribution (+-0.14). Because
+Climin doesn't offer a uniform initialization I will use a normal one.
