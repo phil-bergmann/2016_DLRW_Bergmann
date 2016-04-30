@@ -15,8 +15,9 @@ For use just run the script.
 
 Problem 11:
 receptive_fields.py
-Run to generate the 'repflds.png' image (already done, 'adam'). This implementation shows the receptive fields for 'rmsprop'
-and 'adam' and saves the images to 'repflds.png' (overrides previus ones).
+Run to generate the 'repflds.png' image (already done, 'adam'). This implementation shows the receptive fields for saved
+*.pkl models of the LogReg class and saves the images to 'repflds.png' (overrides previus ones). Run to see 'rmsprop'
+and 'adam' receptive fields.
 
 Problem 12:
 Run plot_losses.py - Warning overrides original error.png!

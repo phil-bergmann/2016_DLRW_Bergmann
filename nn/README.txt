@@ -51,4 +51,36 @@ initialization. To limit the time needed for training I will only train until ep
 if there has been a positive effect. The standard initialization method for all above examples were random samples drawn
 from a gaussian distribution with zero mean and 0.01 standard deviation. First let's look at tanh hidden layer. The tutorial
 cites that a good interval would be between +-sqrt(6/(fan_in+fan_out) drawn from an uniform distribution (+-0.14). Because
-Climin doesn't offer a uniform initialization I will use a normal one.
+Climin doesn't offer a uniform initialization I will use a normal one. For sigmoidal hidden units the same value times 4
+is used. The RELU units behave a little bit different, since they are zero for all inputs <0. So there exist two different
+approaches, the first is to use an interval between sqrt(2/fan_in) and the second ist to use the standard initalization and add
+a small positve constant to the bias, to ensure that the RELU units are in their working working range.
+init method         validation error    test error  epoch
+
+TANH
+standard            1.80                1.79        292
+enhanced            1.75                1.87        274
+
+SIGMOID
+standard            2.52                2.67        299
+enhanced            2.57                2.68        288
+
+RELU
+standard            1.64                1.85        283
+enhanced            1.73                1.81        274
+bias shift (1)      1.90                2.01        242
+
+To sum up the results, here nearly no effects of the usage of another initialization method could be observed. Maybe bigger
+networks need to be constructed no observe bigger effects. At least none of the initialization methods worked particulary
+bad and thus the network seems to be quite robust and converges to a small test/validation error no matter where it started
+
+Problem 17:
+-> See problem 18
+
+Problem 18:
+plot.py
+Run the script, it will train 3 networks (tanh, sigmoid, relu), save their receptive fields as repfield_name.png and at
+the end plot the error curves and save them in error.png.
+
+Problem 19:
+Already done, just look at the repfield outputs from problem 17, error rates are written on the repfield pngs.

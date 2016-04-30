@@ -25,7 +25,7 @@ def receptive_flieds(model='rmsprop.pkl'):
 
     figure.set_facecolor('white')
     figure.suptitle(model.split('.')[0], size='xx-large')
-    figure.savefig('repflds.png')
+    figure.savefig('repflds.png', dpi=400)
     plt.show()
 
 

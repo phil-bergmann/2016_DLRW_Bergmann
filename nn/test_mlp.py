@@ -10,14 +10,15 @@ import climin
 import climin.initialize
 import climin.util
 import six.moves.cPickle as pickle
+import matplotlib.pyplot as plt
 
 from data import load_data
 from MLP import MLP
 
 
-def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
+def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1,
              dataset='mnist.pkl.gz', batch_size=20, n_hidden=300, optimizer='gradient_descent', verbose=False,
-             initialize='relu2', move_mean=None, activation=T.tanh):
+             initialize=None, move_mean=None, activation=T.tanh, plot=None, hidden_name=None):
     """
     Demonstrate stochastic gradient descent optimization for a multilayer
     perceptron
@@ -55,6 +56,9 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
 
     :type move_mean: float
     :param move_mean: move the mean of the input data
+
+    :type activation: Object
+    :param activation: activation function to use: T.tanh, T.nnet.sigmoid, T.nnet.relu
     """
     # theano.config.optimizer='None'
     # theano.config.exception_verbosity='high'
@@ -98,19 +102,23 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
     wrt = numpy.zeros(28*28*n_hidden + n_hidden + n_hidden * 10 + 10, dtype=theano.config.floatX)
     templates = [[(28*28, n_hidden), n_hidden], [(n_hidden, 10), 10]]
 
-    # initialize weights, not biases
+    # initialize weights, and biases
+    # sqrt(6/(fan_in+fan_out))
     if initialize == 'tanh':
         p = unpack(wrt, templates)
         climin.initialize.randomize_normal(p[0][0], 0, 0.14)
         climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+    # 4 * sqrt(6/(fan_in+fan_out))
     elif initialize == 'sig':
         p = unpack(wrt, templates)
         climin.initialize.randomize_normal(p[0][0], 0, 0.56)
         climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+    #
     elif initialize == 'relu1':
         p = unpack(wrt, templates)
-        climin.initialize.randomize_normal(p[0][0], 0, 0.14)
+        climin.initialize.randomize_normal(p[0][0], 0, 0.08)
         climin.initialize.randomize_normal(p[1][0], 0, 0.01)
+    # push bias to get to linear part of relu
     elif initialize == 'relu2':
         p = unpack(wrt, templates)
         climin.initialize.randomize_normal(p[0][0], 0, 0.01)
@@ -178,8 +186,8 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
         inputs=[],
         outputs=classifier.errors(y),
         givens={
-            x: valid_set_x,
-            y: valid_set_y
+            x: train_set_x,
+            y: train_set_y
         }
     )
 
@@ -309,6 +317,31 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1500,
             os.path.split(__file__)[1] +
            ' ran for %.2fm, with %f epochs/min' % ((end_time - start_time) / 60., epoch/(end_time - start_time) * 60.)),
           file=sys.stderr)
+
+    if plot is not None:
+        figure, (axes) = plt.subplots(15, 20)
+        axes = axes.flatten()
+        weights = unpack(best_params, templates)[0][0]
+
+        weights = weights.transpose((1, 0)).reshape(300, 28, 28)
+
+        for i in xrange(weights.shape[0]):
+            axes[i].imshow(weights[i], cmap='gray')
+            axes[i].axis('off')
+
+        figure.set_facecolor('white')
+        figure.subplots_adjust(top=0.85)
+        figure.suptitle('Multilayer Perceptron with %s hidden neurons\nTrained with %s for %d epochs (%.2fm)\ntest performance'
+                        ' (epoch %d): %.2f%%' % (hidden_name, optimizer, epoch, (end_time - start_time) / 60., best_epoch,
+                                                 test_loss * 100),
+                        size='x-large')
+        figure.savefig(plot, dpi=400)
+        #plt.show()
+
+        plt.close(figure)
+
+    if verbose:
+        return tr_losses, va_losses, te_losses, x_axis
 
 
 if __name__ == '__main__':
