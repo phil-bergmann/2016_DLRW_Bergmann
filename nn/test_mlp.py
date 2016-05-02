@@ -255,7 +255,6 @@ def test_mlp(L1_reg=0.00, L2_reg=0.0001, n_epochs=1,
     x_axis = []
 
     best_params = numpy.empty_like(wrt)
-    best_test = numpy.inf
 
     for info in opt:
         iteration = info['n_iter']
