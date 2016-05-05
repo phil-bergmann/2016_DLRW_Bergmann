@@ -28,6 +28,13 @@ Just run the file and it will output 'autoencoderrec_lambdaX.png' and 'autoencod
 run with 1000 neurons and different values for lambda (X)
 
 Problem 26:
-
+A sparse encoding of the MNIST dataset is a compressed representation of the different test samples in the dataset. Given
+only the hidden unit activations of a test one can reconstruct the the original image with the upper part of the
+autoncoder. So the sparse encoding captures the most important features of the whole dataset and ignores not so important
+ones. Given that, a sparse encoding is a very good pretraining for a multilayer neural network and yields much faster
+convergence and better results when used.
 
 Bonus problem:
+set kl (beta) and p parameters in the train function to activate kullback leiber divergence. Just run autoencoder_kl.py.
+Note: It was pretty slow, around a few seconds per minibatch, so I could not test the KL-Divergence. I also created a second
+file for the kl divergence implementation, beacause it also slows down computation, if the kl parameter is set to 0.

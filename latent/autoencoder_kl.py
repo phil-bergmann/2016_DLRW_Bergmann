@@ -59,11 +59,15 @@ class autoencoder():
 
         y = self.da.get_hidden_values(self.x)
         z = self.da.get_reconstructed_input(y)
+        # KL-Divergence
+        activation = self.da.get_hidden_values(self.train_set_x)
+        p_hat = T.mean(activation, axis=0)
+        kl_loss = self.p * T.log(self.p/p_hat) + (1 - self.p) * T.log((1 - self.p) / (1 - p_hat))
         # note : we sum over the size of a datapoint; if we are using
         #        minibatches, L will be a vector, with one entry per
         #        example in minibatch
         #L = - T.sum(self.x * T.log(z) + (1 - self.x) * T.log(1 - z), axis=1)
-        L = T.sum((z-self.x)**2, axis=1) + self.sparse*T.sum(abs(y), axis=1)
+        L = T.sum((z-self.x)**2, axis=1) + self.sparse*T.sum(abs(y), axis=1) + self.kl * T.sum(kl_loss)
         # note : L is now a vector, where each element is the
         #        cross-entropy cost of the reconstruction of the
         #        corresponding example of the minibatch. We need to
@@ -114,7 +118,7 @@ class autoencoder():
             p[0].set_value(p[1], borrow=True)
 
     def train(self, learning_rate=0.001, training_epochs=15, batch_size=20, optimizier="rmsprop", sparse=None,
-              image_save=None):
+              image_save=None, kl=None, p=None):
         # initialize weights
         self.initialize()
 
@@ -128,6 +132,12 @@ class autoencoder():
         # set sparse
         if sparse:
             self.sparse.set_value(sparse, borrow=True)
+
+        # set kl
+        if kl:
+            self.kl = kl
+        if p:
+            self.p = p
 
         def d_loss_wrt_pars(parameters, inpt):
             self.set_pars()
@@ -195,4 +205,4 @@ class autoencoder():
 
 if __name__ == '__main__':
     aec = autoencoder(n_hidden=1000)
-    aec.train(image_save='test.png', training_epochs=15, sparse=0.1)
+    aec.train(image_save='test.png', training_epochs=15, kl=0.1, p=0.04)
