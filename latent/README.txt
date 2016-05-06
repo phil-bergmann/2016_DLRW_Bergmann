@@ -1,5 +1,13 @@
 Depends on content of ../data and the whole content of this folder
 
+Problem 20:
+pca.py
+
+Problem 21:
+plot_pca.py
+Run to plot the scatterplots for both MNIST and CIFAR-10.
+
+
 Problem 22+23:
 autoencoder.py
 Implementation of a autoencoder class. Optimizers included are gradient descent and rmsprop. For a example how to run

@@ -86,3 +86,31 @@ def load_data(dataset, shared=True):
 
     rval = [(train_set_x, train_set_y), (valid_set_x, valid_set_y), (test_set_x, test_set_y)]
     return rval
+
+def load_cifar(dataset='../data/cifar-10/', concat=True, label_names=False):
+    names = ['data_batch_1_gray', 'data_batch_2_gray', 'data_batch_3_gray', 'data_batch_4_gray', 'data_batch_5_gray',
+             'test_batch_gray']
+
+    rval = []
+
+    print('[*] Loading data ...')
+
+    for n in names:
+        fo = open(dataset+n, 'rb')
+        dictionary = pickle.load(fo)
+        fo.close()
+        data = dictionary["data"]
+        labels = dictionary["labels"]
+        if len(rval) == 0 or not concat or n == 'test_batch_gray':
+            rval.append((data, labels))
+        else:
+            rval[0] = (numpy.concatenate((rval[0][0], data)), numpy.concatenate((rval[0][1], labels)))
+
+    if label_names:
+        fo = open(dataset + 'batches.meta', 'rb')
+        dictionary = pickle.load(fo)
+        fo.close()
+        labels = dictionary["label_names"]
+        rval.append(labels)
+
+    return rval

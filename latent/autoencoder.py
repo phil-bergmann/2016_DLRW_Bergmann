@@ -17,6 +17,7 @@ from dA import dA
 from data import load_data
 from tile_raster_images import tile_raster_images
 
+
 class autoencoder():
 
     def __init__(self, dataset='mnist.pkl.gz', n_hidden=1000):
