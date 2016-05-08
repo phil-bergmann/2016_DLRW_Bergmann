@@ -67,13 +67,13 @@ class autoencoder():
         #        minibatches, L will be a vector, with one entry per
         #        example in minibatch
         #L = - T.sum(self.x * T.log(z) + (1 - self.x) * T.log(1 - z), axis=1)
-        L = T.sum((z-self.x)**2, axis=1) + self.sparse*T.sum(abs(y), axis=1) + self.kl * T.sum(kl_loss)
+        L = T.sum((z-self.x)**2, axis=1) + self.sparse*T.sum(abs(y), axis=1)
         # note : L is now a vector, where each element is the
         #        cross-entropy cost of the reconstruction of the
         #        corresponding example of the minibatch. We need to
         #        compute the average of all these to get the cost of
         #        the minibatch
-        cost = T.mean(L)
+        cost = T.mean(L) + self.kl * T.sum(kl_loss)
 
         # compute the gradients of the cost of the `dA` with respect
         # to its parameters

@@ -12,7 +12,7 @@ def bhtsne_mnist():
 
     data = numpy.vstack((train_set_x, valid_set_x, test_set_x))
 
-    run_bhtsne(data, save_name='bhtsne_mnist.png')
+    run_bhtsne(data[:5000], save_name='bhtsne_mnist.png', invert=True, theta=0.5)
 
 
 if __name__ == '__main__':
