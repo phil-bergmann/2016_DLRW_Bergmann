@@ -3,6 +3,7 @@
 *.pyc
 *.pkl
 test.py
+test.png
 
 !MulticlassLogisticRegression/adam.pkl
 !MulticlassLogisticRegression/rmsprop.pkl
