@@ -1,2 +1,17 @@
 Depends on content of ../data and the whole content of this folder
 
+Problem 30:
+kmeans.py
+
+Problem 31:
+run kmeans.py
+The 'repflds.png' File will be created.
+
+Bonus Question 1:
+minibatch_kmeans.py
+Tried to implement it but somehow didn't get it right. Think my theano functions are somewhat buggy.
+Image is written to 'cifar_minibatch.png'.
+
+Note: Tried to improve it but it still only produces crap...
+
+Bonus Question 2:

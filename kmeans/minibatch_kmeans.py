@@ -13,7 +13,9 @@ from PIL import Image
 from data import load_cifar
 from tile_raster_images import tile_raster_images
 
-def kmeans(data, clusters=400, save_name='test.png', epochs=30):
+def kmeans(data, clusters=400, save_name='test.png', epochs=30, batch_size=300):
+
+    n_minibatch = data.shape[0] / batch_size
 
     print("[*] Initializing ...")
 
@@ -35,9 +37,12 @@ def kmeans(data, clusters=400, save_name='test.png', epochs=30):
 
 
     # 3. Loop until convergence
+    index = T.lscalar()
     # initialize cluster centers
     D_tmp = numpy.zeros((data_norm.shape[0], clusters), dtype=theano.config.floatX)
-    climin.initialize.randomize_normal(D_tmp, 0, 1)
+    for i in xrange(D_tmp.shape[1]):
+        D_tmp[:, i] = data_norm[:, numpy.random.randint(0, data_norm.shape[1])]
+    #climin.initialize.randomize_normal(D_tmp, 120, 50)
 
     D = theano.shared(D_tmp,
                       name="D",
@@ -47,36 +52,56 @@ def kmeans(data, clusters=400, save_name='test.png', epochs=30):
     # copy data to shared var for performance
     X = theano.shared(data_norm.astype(theano.config.floatX))
 
-    S = theano.shared(numpy.zeros((clusters, data_norm.shape[1]), dtype=theano.config.floatX),
+    S = theano.shared(numpy.zeros((clusters, batch_size), dtype=theano.config.floatX),
                       name="S",
                       borrow=True
                       )
 
+    c = theano.shared(numpy.zeros(clusters, dtype=theano.config.floatX),
+                      name='c',
+                      borrow=True
+                      )
+
     # setting up the functions to begin looping
-    # update S
-    big_pos = T.argmax(abs(T.dot(D.T, X)), axis=0)
-    #big_pos = T.argmax(T.dot(D.T, X), axis=0)
-    big_vals = T.dot(D.T, X)[big_pos, T.arange(big_pos.shape[0])]
+    # nearest cluster
+    x = T.dmatrix()
+    nearest, _ = theano.scan(
+        fn=lambda x, D: T.argmax(T.sum(T.sqr(D.T - x), axis=1)),
+        outputs_info=None,
+        sequences=X.T,
+        non_sequences=D
+    )
 
-    zeros_sub = T.zeros_like(S)[big_pos, T.arange(big_pos.shape[0])]
-    S_new = T.set_subtensor(zeros_sub, big_vals)
+    def update_cluster(x, number, D, c):
+        c = T.inc_subtensor(c[number], 1)
+        learning_rate = 1/c[number]
+        D = T.set_subtensor(D[:, number], D[:, number] * (1 - learning_rate) + x * learning_rate)
+        return [D, c]
 
-    update_S = theano.function([], updates=[(S, S_new)])
-    update_D = theano.function([], updates=[(D, T.dot(X, S.T) + D)])
-    normalize_D = theano.function([], updates=[(D, D / T.sqrt(T.sum(T.sqr(D), axis=0)))])
-    cost = theano.function([], outputs=T.sum(T.sqrt(T.sum(T.sqr(T.dot(D, S) - X), axis=0))))
+    ([D_new, c_new], updates) = theano.scan(
+        fn=update_cluster,
+        sequences=[X.T, nearest],
+        outputs_info=[D, c]
+    )
 
-    normalize_D()
+    train = theano.function([index], outputs=[D_new, c_new], givens={X: X[:, index * batch_size: (index + 1) * batch_size]})
+
+    # setting up the functions to calculate cost
+    S_tmp = theano.shared(numpy.zeros((clusters, data_norm.shape[1]), dtype=theano.config.floatX),
+                      name="S",
+                      borrow=True
+                      )
+
 
     print("[*] Training ...")
 
-    start_time = end_time = timeit.default_timer()
+    start_time = timeit.default_timer()
 
     for i in xrange(epochs):
-        update_S()
-        update_D()
-        normalize_D()
-        print('Training epoch %d, cost %.2f' % (i+  1, cost()))
+        for b in xrange(n_minibatch):
+            D_res, c_res = train(b)
+            D.set_value(D_res[-1])
+            c.set_value(c_res[-1])
 
     end_time = timeit.default_timer()
 
@@ -93,4 +118,4 @@ def kmeans(data, clusters=400, save_name='test.png', epochs=30):
 
 if __name__ == '__main__':
     data = load_cifar(small=True)[0][0]
-    kmeans(data, clusters=400, save_name='repflds.png')
+    kmeans(data, epochs=3, clusters=400, save_name='cifar_minibatch.png')
