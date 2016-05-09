@@ -1,11 +1,21 @@
+from __future__ import print_function
+
 import numpy
 import theano
 import theano.tensor as T
 import climin.initialize
+import timeit
+import os
+import sys
+import math
+from PIL import Image
 
 from data import load_cifar
+from tile_raster_images import tile_raster_images
 
-def test(data, clusters=200):
+def kmeans(data, clusters=400, save_name='test.png', epochs=30):
+
+    print("[*] Initializing ...")
 
     # 1. Normalize inputs
     data_norm = (data - numpy.mean(data, axis=1)[:, numpy.newaxis])
@@ -16,13 +26,9 @@ def test(data, clusters=200):
 
 
     # 2. Whiten inputs
-    epsilon = 0.05
     d, V = numpy.linalg.eig(numpy.cov(data_norm))
-    # Eigenvalue Matrix
-    #D = numpy.eye(d.shape[0])
-    #D = d*D
-    #transformation = numpy.dot(numpy.dot(V, numpy.diag(1.0/numpy.sqrt(numpy.diag(d) + epsilon))), V.T)
-    transformation = numpy.dot(numpy.dot(V, 1.0 / numpy.sqrt(numpy.diag(d) + epsilon)), V.T)
+    epsilon = 0.1 * numpy.eye(d.shape[0])
+    transformation = numpy.dot(numpy.dot(V, numpy.linalg.inv(numpy.sqrt(numpy.diag(d) + epsilon))), V.T)
 
     # apply transformation
     data_norm = numpy.dot(transformation, data_norm)
@@ -32,22 +38,59 @@ def test(data, clusters=200):
     # initialize cluster centers
     D_tmp = numpy.zeros((data_norm.shape[0], clusters), dtype=theano.config.floatX)
     climin.initialize.randomize_normal(D_tmp, 0, 1)
-    # normalize
-    D_tmp /= numpy.sum(D_tmp, axis=0)[numpy.newaxis, :]
-
-    S = theano.shared(numpy.zeros((data_norm.shape[0], clusters), dtype=theano.config.floatX),
-                      name="S",
-                      borrow=True
-                      )
 
     D = theano.shared(D_tmp,
                       name="D",
                       borrow=True
                       )
 
+    # copy data to shared var for performance
+    X = theano.shared(data_norm.astype(theano.config.floatX))
 
+    S = theano.shared(numpy.zeros((clusters, data_norm.shape[1]), dtype=theano.config.floatX),
+                      name="S",
+                      borrow=True
+                      )
+
+    # setting up the functions to begin looping
+    # update S
+    big_pos = T.argmax(abs(T.dot(D.T, X)), axis=0)
+    #big_pos = T.argmax(T.dot(D.T, X), axis=0)
+    big_vals = T.dot(D.T, X)[big_pos, T.arange(big_pos.shape[0])]
+
+    zeros_sub = T.zeros_like(S)[big_pos, T.arange(big_pos.shape[0])]
+    S_new = T.set_subtensor(zeros_sub, big_vals)
+
+    update_S = theano.function([], updates=[(S, S_new)])
+    update_D = theano.function([], updates=[(D, T.dot(X, S.T) + D)])
+    normalize_D = theano.function([], updates=[(D, D / T.sqrt(T.sum(T.sqr(D), axis=0)))])
+    cost = theano.function([], outputs=T.sum(T.sqrt(T.sum(T.sqr(T.dot(D, S) - X), axis=0))))
+
+    normalize_D()
+
+    print("[*] Training ...")
+
+    start_time = end_time = timeit.default_timer()
+
+    for i in xrange(epochs):
+        update_S()
+        update_D()
+        normalize_D()
+        print('Training epoch %d, cost %.2f' % (i+1, cost()))
+
+    end_time = timeit.default_timer()
+
+    print(('The code for file ' +
+           os.path.split(__file__)[1] +
+           ' ran for %.2fs' % (end_time - start_time)), file=sys.stderr)
+
+    image = Image.fromarray(
+        tile_raster_images(X=D.get_value(borrow=True).T,
+                           img_shape=(12, 12), tile_shape=(int(math.sqrt(clusters)), int(math.sqrt(clusters))),
+                           tile_spacing=(1, 1)))
+    image.save(save_name)
 
 
 if __name__ == '__main__':
     data = load_cifar(small=True)[0][0]
-    test(data)
+    kmeans(data, clusters=400, save_name='repflds.png')
