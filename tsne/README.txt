@@ -18,6 +18,9 @@ theta       Time(s)
 As can be seen choosing bigger thetas reduces the runtime, but if we look at the picture produced at 1.0 we see that
 performance also decreases.
 
+Note on parameters: inverse tells if all picture points should be inverted (255->0, 0->255). This only affects how the
+pictures of the samples are displayed in the plot. Shape must be the shape of the plotted pictures.
+
 Problem 29:
 execute bhtsne_mnist.py
 Outputs the picture to 'bhtsne_mnist.png'

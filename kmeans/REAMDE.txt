@@ -14,4 +14,11 @@ Image is written to 'cifar_minibatch.png'.
 
 Note: Tried to improve it but it still only produces crap...
 
+Note2: New try to implement minibatch k-Means: minibatch_kmeans2.py
+This time the old structure from kmeans.py was used and only a damping was introduced in step 3 of the paper where
+D = X * S_T + damping*D to make the influence of one minibatch smaller on the overall result D. This factor can be adapted
+in the function parameters. At the moment it is set to dataset_size / batch_size (50000/500 = 100) which makes sense for me.
+The result is plotted to 'cifar_minibatch2.png'.
+To test just run minibatch_kmeans2.py.
+
 Bonus Question 2:

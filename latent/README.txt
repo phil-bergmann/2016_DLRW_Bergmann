@@ -15,8 +15,8 @@ look at the end of the file (the file can directly be run). The initialization o
 the number of the hidden units. All other parameters can be adjusted through the train() function. This has the advantage
 that for multiple runs the model has to be built only one time and all parameters are stored in the class until the next
 time update() is run.
-test_params.py tries out different parameters for the number of neurons and the parameter lambda. The resulats are as
-follows:
+test_params.py tries out different parameters for the number of neurons and the parameter lambda (sparse). The resulats
+are as follows:
 Neurons:    500     784     1000    1500    2000
 lambda
     0       1.30    0.880   0.789   0.794   0.826
