@@ -5,5 +5,5 @@
 test.py
 test.png
 
-!MulticlassLogisticRegression/adam.pkl
-!MulticlassLogisticRegression/rmsprop.pkl
+!logreg/adam.pkl
+!logreg/rmsprop.pkl
